@@ -26,6 +26,11 @@ export default function ListingCard({ listing }: { listing: Listing }) {
         <span className="absolute left-2 top-2 border border-fb-blue/20 bg-white/95 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-fb-blue">
           {listing.category}
         </span>
+        {listing.sold && (
+          <span className="absolute right-2 top-2 border border-red-300 bg-red-600 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+            Sold
+          </span>
+        )}
       </div>
 
       <div className="flex flex-1 flex-col gap-1 p-3">

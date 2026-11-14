@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Plus, Store } from "lucide-react";
+import { CreditCard, Plus, Store } from "lucide-react";
 
 export default function Header() {
   const pathname = usePathname();
@@ -29,6 +29,17 @@ export default function Header() {
             }`}
           >
             Browse
+          </Link>
+          <Link
+            href="/sell"
+            className={`hidden items-center gap-1.5 text-xs font-bold sm:inline-flex ${
+              pathname === "/sell"
+                ? "text-white"
+                : "text-white/80 hover:text-white"
+            }`}
+          >
+            <CreditCard className="h-3.5 w-3.5" aria-hidden="true" />
+            Sell with Stripe
           </Link>
           <Link
             href="/create"
