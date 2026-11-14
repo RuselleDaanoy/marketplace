@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --fb-blue: #3b5998;
+  --fb-border: #d3d6db;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: #f4f5f7;
+  color: #1d2129;
+}
+
+/* Sharp, 2008-era form controls */
+.field {
+  @apply w-full border border-fb-border bg-white px-3 py-2 text-sm text-fb-text outline-none transition-colors placeholder:text-fb-muted focus:border-fb-blue focus:ring-1 focus:ring-fb-blue/30;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 border border-fb-dark bg-fb-blue px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-fb-dark disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 border border-fb-border bg-white px-4 py-2 text-sm font-bold text-fb-text transition-colors hover:border-fb-blue hover:text-fb-blue;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toast-in {
+  animation: toast-in 0.18s ease-out;
+}
