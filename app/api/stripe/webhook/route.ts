@@ -2,7 +2,8 @@ import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { errorMessage } from "@/lib/errors";
 import { getServerSupabase } from "@/lib/supabase-admin";
-import { getStripe } from "@/lib/stripe";
+import { getStripe, platformFeeCents, toCents } from "@/lib/stripe";
+import type { Listing } from "@/lib/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -52,32 +53,55 @@ export async function POST(request: Request) {
       // Not one of our orders in this shared sandbox.
       if (!listingId) return NextResponse.json({ received: true });
 
-      const { data: order, error: orderLookupError } = await supabase
-        .from("orders")
-        .select("id")
-        .eq("stripe_session_id", session.id)
-        .maybeSingle();
-
-      if (orderLookupError) throw orderLookupError;
-      if (!order) return NextResponse.json({ received: true });
-
       const buyerEmail =
         session.customer_details?.email ?? session.customer_email ?? null;
+      const paymentIntent =
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : (session.payment_intent?.id ?? null);
 
-      const { error: updateOrderError } = await supabase
-        .from("orders")
-        .update({
-          status: "paid",
+      // Fetch the listing so a missing order row can be rebuilt from Stripe's
+      // event. This keeps the handler self-healing and idempotent: retries and
+      // late events (even one that beats the checkout insert) still commit.
+      const { data: listingData, error: listingLookupError } = await supabase
+        .from("listings")
+        .select("id, title, email, price")
+        .eq("id", listingId)
+        .maybeSingle();
+
+      if (listingLookupError) throw listingLookupError;
+      if (!listingData) return NextResponse.json({ received: true });
+
+      const listing = listingData as Pick<
+        Listing,
+        "id" | "title" | "email" | "price"
+      >;
+      const amountTotal =
+        typeof session.amount_total === "number"
+          ? session.amount_total
+          : toCents(Number(listing.price));
+      const platformFee = Number(session.metadata?.platform_fee);
+
+      const { error: orderError } = await supabase.from("orders").upsert(
+        {
+          listing_id: listing.id,
+          seller_email: listing.email.trim().toLowerCase(),
           buyer_email: buyerEmail,
-          stripe_payment_intent:
-            typeof session.payment_intent === "string"
-              ? session.payment_intent
-              : (session.payment_intent?.id ?? null),
+          listing_title: listing.title,
+          amount_total: amountTotal,
+          platform_fee: Number.isFinite(platformFee)
+            ? platformFee
+            : platformFeeCents(amountTotal),
+          currency: session.currency ?? "usd",
+          status: "paid",
+          stripe_session_id: session.id,
+          stripe_payment_intent: paymentIntent,
           paid_at: new Date().toISOString(),
-        })
-        .eq("stripe_session_id", session.id);
+        },
+        { onConflict: "stripe_session_id" },
+      );
 
-      if (updateOrderError) throw updateOrderError;
+      if (orderError) throw orderError;
 
       const { error: updateListingError } = await supabase
         .from("listings")
